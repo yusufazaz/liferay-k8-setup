@@ -1,0 +1,26 @@
+{{- if .Values.envConfigMap.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "liferay.fullname" . }}-config
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app: {{ include "liferay.name" . }}
+    chart: {{ include "liferay.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+data:
+{{- range $fileName, $content := .Values.envConfigMap.files }}
+  {{- if kindIs "string" $content }}
+  {{ $fileName }}: |
+    {{- $content | nindent 4 }}
+  {{- end }}
+{{- end }}
+
+{{- range $fileName, $content := .Values.envConfigMap.files.osgi.configs }}
+  {{- if kindIs "string" $content }}
+  {{ $fileName }}: |
+    {{- $content | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

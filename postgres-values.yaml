@@ -1,0 +1,9 @@
+image:
+  tag: 13
+  
+global:
+  postgresql:
+    auth:
+      database: liferaydb 
+      username: liferay
+      password: liferaypassword

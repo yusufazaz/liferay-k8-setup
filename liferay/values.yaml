@@ -1,0 +1,133 @@
+
+replicaCount: 1
+
+image:
+  repository: liferay/portal-pg
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "stable"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+rbac:
+  create: false
+  
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+extraEnv:
+  LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_URL: jdbc:postgresql://liferay-pg-postgresql.liferay7.svc.cluster.local:5432/postgres
+  LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_DRIVER_UPPERCASEC_LASS_UPPERCASEN_AME: org.postgresql.Driver
+  LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_USERNAME: liferay
+  LIFERAY_JDBC_PERIOD_DEFAULT_PERIOD_PASSWORD: liferaypassword
+  LIFERAY_SEARCH_PERIOD_ENGINE_PERIOD_CONNECTION_PERIOD_MODE: REMOTE
+  LIFERAY_SEARCH_PERIOD_ENGINE_PERIOD_CONNECTION_PERIODINTRANET_PERIOD_URLS: elasticsearch-service.liferay7.svc.cluster.local:9200
+  LIFERAY_SEARCH_PERIOD_ENGINE_PERIOD_IMPL: com.liferay.portal.search.elasticsearch7.internal.ElasticsearchEngine
+  LIFERAY_SEARCH_PERIOD_ENGINE_PERIOD_CONNECTION_PERIOD_HTTP_SSL_ENABLED: false
+  LIFERAY_PRODUCTION_UPPERCASEM_ODE_UPPERCASEE_NABLED: true
+  LIFERAY_JAVA_OPTS: -Xms2g -Xmx4g
+  JAVA_VERSION: zulu11
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # runAsUser: 1000
+
+
+containerPort: 8080
+
+
+service:
+  enabled: true
+  type: ClusterIP
+  httpPort: 80
+
+ingress:
+  enabled: false
+ 
+resources:
+  requests:
+    memory: "4Gi"
+    cpu: "2"
+  limits:
+    memory: "4Gi"
+    cpu: "2"
+
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+global:
+  pv:
+    create: true
+  pvSize: 2Gi
+pv:
+  hostpath:
+    data: /Users/tt/liferay/mnt/data
+    mnt: /Users/tt/liferay/mnt/liferay
+    osgi:
+      modules: /Users/tt/liferay/mnt/osgi/modules
+      war: /Users/tt/liferay/mnt/osgi/war
+
+
+mountPath:
+  data: /opt/liferay/data
+  mnt: /mnt/liferay
+  osgi:
+    modules: /opt/liferay/osgi/modules
+    war: /opt/liferay/osgi/war
+
+envConfigMap:
+  enabled: false
+  files:
+    portal-ext.properties: |
+      retry.jdbc.on.startup.delay=5
+      retry.jdbc.on.startup.max.retries=5
+      company.default.name=Liferay Kubernetes
+      company.default.web.id=liferay.com 
+      com.liferay.portal.servlet.filters.gzip.GZipFilter=false
+      com.liferay.portal.servlet.filters.sso.ntlm.NtlmFilter=false
+      com.liferay.portal.servlet.filters.sso.openid.connect.OpenIdConnectFilter=false
+      com.liferay.portal.servlet.filters.sso.saml.SamlFilter=false
+      com.liferay.portal.servlet.filters.sso.cas.CASFilter=false
+      com.liferay.portal.servlet.filters.sso.token.SSOTokenFilter=false
+      com.liferay.portal.servlet.filters.sso.ntlm.NtlmFilter=false
+      com.liferay.portal.servlet.filters.sso.ntlm.NtlmPostFilter=false
+      cluster.link.enabled=true
+      ehcache.cluster.link.replication.enabled=true
+      cluster.link.autodetect.address=postgres.postgres.svc.cluster.local:5432
+    osgi:
+      configs:
+        com.liferay.portal.search.elasticsearch7.configuration.ElasticsearchConfiguration.config: |
+          operationMode="REMOTE" 
+          indexNamePrefix="liferay-" 
+          clusterName="liferay_cluster" 
+          logExceptionsOnly="false" 
+          productionModeEnabled="true" 
+          networkHostAddresses=["liferay-es-elasticsearch.liferay7.svc.cluster.local:9200"] 
+

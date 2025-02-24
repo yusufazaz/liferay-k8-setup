@@ -1,0 +1,61 @@
+{{- if .Values.global.pv.create -}}
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: {{ include "liferay.fullname" . }}-data-pv
+  labels:
+    {{- include "liferay.labels" . | nindent 4 }}
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: {{ .Values.pv.hostpath.data | quote }}
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: {{ include "liferay.fullname" . }}-mnt-pv
+  labels:
+    {{- include "liferay.labels" . | nindent 4 }}
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: {{ .Values.pv.hostpath.mnt | quote }}
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: {{ include "liferay.fullname" . }}-modules-pv
+  labels:
+    {{- include "liferay.labels" . | nindent 4 }}
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: {{ .Values.pv.hostpath.osgi.modules | quote }}
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: {{ include "liferay.fullname" . }}-war-pv
+  labels:
+    {{- include "liferay.labels" . | nindent 4 }}
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: {{ .Values.pv.hostpath.osgi.war | quote }}
+{{- end -}}

@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "liferay.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.name }}
+    helm.sh/chart: {{ .Values.chart }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app: {{ include "liferay.name" . }}
+    chart: {{ include "liferay.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "liferay.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "liferay.name" . }}
+        release: {{ .Release.Name }}
+      annotations:
+        {{ toYaml .Values.podAnnotations | indent 8 }}
+    spec:
+      serviceAccountName: {{ template "liferay.serviceAccountName" . }}
+      securityContext:
+        {{ toYaml .Values.securityContext | indent 8 }}
+      {{- if .Values.envConfigMap.enabled -}}  
+      initContainers:
+        - name: copy-files
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              mkdir -p /mnt/liferay/files /mnt/liferay/files/osgi/configs;
+              cp /config/portal-ext.properties /mnt/liferay/files/portal-ext.properties;
+              cp /config/com.liferay.portal.search.elasticsearch7.configuration.ElasticsearchConfiguration.config /mnt/liferay/files/osgi/configs/com.liferay.portal.search.elasticsearch7.configuration.ElasticsearchConfiguration.config;
+              echo "Files copied successfully";
+          volumeMounts:
+            - name: mnt-volume
+              mountPath: /mnt/liferay
+            - name: config-map-volume
+              mountPath: /config     
+      {{- end }}   
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- range $key, $value := .Values.extraEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key, $value := .Values.extraEnvSecrets }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Release.Name }}
+                  key: {{ $value | quote }}
+            {{ end }}
+          volumeMounts:
+            - mountPath: {{ .Values.mountPath.data | quote }}
+              name: data-volume
+            - name: mnt-volume
+              mountPath: {{ .Values.mountPath.mnt | quote }}
+            - name: osgi-modules-volume
+              mountPath: {{ .Values.mountPath.osgi.modules | quote }}
+            - name: osgi-war-volume
+              mountPath: {{ .Values.mountPath.osgi.war | quote }}              
+          ports:
+            - name: http
+              containerPort: {{ .Values.containerPort }}
+              protocol: TCP
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 12 }}
+          {{- end }}
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 12 }}
+          {{- end }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+      volumes:
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: {{ include "liferay.fullname" . }}-data-pvc
+        - name: mnt-volume
+          persistentVolumeClaim:
+            claimName: {{ include "liferay.fullname" . }}-mnt-pvc
+        - name: osgi-modules-volume
+          persistentVolumeClaim:
+            claimName: {{ include "liferay.fullname" . }}-modules-pvc
+        - name: osgi-war-volume
+          persistentVolumeClaim:
+            claimName: {{ include "liferay.fullname" . }}-war-pvc
+        - name: config-map-volume
+          configMap:
+            name: {{ include "liferay.fullname" . }}-config
